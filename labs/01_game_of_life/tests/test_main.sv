@@ -4,7 +4,7 @@
 // `define SIMULATION
 
 module test_main;
-  parameter N = 5;
+  parameter N = 8;
   parameter M = N + 2;
 
 	// Inputs
