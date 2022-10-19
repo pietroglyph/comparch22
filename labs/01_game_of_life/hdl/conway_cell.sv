@@ -35,6 +35,9 @@ assign sum_final = `get_seg(sums, NUM_NEIGHBORS-1);
 always_comb begin : conway_cell_logic
 	state_d = (state_q & sum_final[1] & ~(|carries)) | (~state_q & &sum_final & ~(|carries));
 end
-always_ff @(posedge clk) state_q = (ena & state_d) | (rst & state_0) | (~ena & ~rst & state_d);
+always_ff @(posedge clk) begin
+	if (rst) state_q <= state_0;
+	else if (ena) state_q <= state_d;
+end
 
 endmodule
