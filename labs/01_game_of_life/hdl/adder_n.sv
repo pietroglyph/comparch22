@@ -1,11 +1,7 @@
 `timescale 1ns/1ps
 `default_nettype none
 
-// You may find it useful to have a way to build an n-bit adder, 
-// or you can manually create them. 
-
-// This module shows how to use a generate statement to connect
-// n 1-bit adders with carries to make a ripple carry adder.
+// Simple N-bit ripple-carry adder
 module adder_n(a, b, c_in, sum, c_out);
 
 parameter N = 2;
