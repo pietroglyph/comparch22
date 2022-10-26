@@ -1,0 +1,36 @@
+[*]
+[*] GTKWave Analyzer v3.3.113 (w)1999-2022 BSI
+[*] Wed Oct 26 22:17:21 2022
+[*]
+[dumpfile] "/home/declan/work/src/github.com/pietroglyph/comparch22/hws/5/pwm.fst"
+[dumpfile_mtime] "Wed Oct 26 22:17:05 2022"
+[dumpfile_size] 3181
+[savefile] "/home/declan/work/src/github.com/pietroglyph/comparch22/hws/5/wave_cfgs/pwm.gtkw"
+[timestart] 0
+[size] 1920 482
+[pos] -1 -1
+*-29.000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] test_pwm.
+[sst_width] 273
+[signals_width] 142
+[sst_expanded] 1
+[sst_vpaned_height] 116
+@200
+-Outputs
+@28
+test_pwm.PWM.out
+@200
+-Internal State
+@8022
+test_pwm.PWM.counter[3:0]
+@200
+-Inputs
+@28
+test_pwm.PWM.clk
+@29
+test_pwm.PWM.step
+@28
+test_pwm.PWM.ena
+test_pwm.PWM.rst
+[pattern_trace] 1
+[pattern_trace] 0

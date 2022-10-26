@@ -1,0 +1,36 @@
+[*]
+[*] GTKWave Analyzer v3.3.113 (w)1999-2022 BSI
+[*] Wed Oct 26 21:50:26 2022
+[*]
+[dumpfile] "/home/declan/work/src/github.com/pietroglyph/comparch22/hws/5/triangle_generator.fst"
+[dumpfile_mtime] "Wed Oct 26 21:47:45 2022"
+[dumpfile_size] 734
+[savefile] "/home/declan/work/src/github.com/pietroglyph/comparch22/hws/5/wave_cfgs/triangle_generator.gtkw"
+[timestart] 0
+[size] 1920 482
+[pos] -27 -24
+*-19.000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] test_triangle_generator.
+[sst_width] 273
+[signals_width] 102
+[sst_expanded] 1
+[sst_vpaned_height] 116
+@201
+-Outputs
+@8024
+test_triangle_generator.UUT.out[3:0]
+@20000
+-
+-
+@200
+-FSM State
+@28
+test_triangle_generator.UUT.state
+@200
+-Inputs
+@28
+test_triangle_generator.UUT.clk
+test_triangle_generator.UUT.ena
+test_triangle_generator.UUT.rst
+[pattern_trace] 1
+[pattern_trace] 0

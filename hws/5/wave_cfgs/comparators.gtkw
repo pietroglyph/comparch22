@@ -1,20 +1,20 @@
 [*]
-[*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
-[*] Fri Oct 21 02:58:25 2022
+[*] GTKWave Analyzer v3.3.113 (w)1999-2022 BSI
+[*] Wed Oct 26 21:45:20 2022
 [*]
-[dumpfile] "/home/avinash/src/cafe-instructors/hws/fa22/5/comparators.fst"
-[dumpfile_mtime] "Fri Oct 21 02:56:33 2022"
-[dumpfile_size] 3982
-[savefile] "/home/avinash/src/cafe-instructors/hws/fa22/5/wave_cfgs/comparators.gtkw"
+[dumpfile] "/home/declan/work/src/github.com/pietroglyph/comparch22/hws/5/comparators.fst"
+[dumpfile_mtime] "Wed Oct 26 21:45:08 2022"
+[dumpfile_size] 3779
+[savefile] "/home/declan/work/src/github.com/pietroglyph/comparch22/hws/5/wave_cfgs/comparators.gtkw"
 [timestart] 0
-[size] 2542 639
-[pos] -1 -1
+[size] 1920 482
+[pos] -27 -24
 *-10.817472 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] test_comparators.
 [sst_width] 329
 [signals_width] 190
 [sst_expanded] 1
-[sst_vpaned_height] 171
+[sst_vpaned_height] 116
 @200
 -Inputs
 @22

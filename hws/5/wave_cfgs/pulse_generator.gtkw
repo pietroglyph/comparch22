@@ -1,0 +1,40 @@
+[*]
+[*] GTKWave Analyzer v3.3.113 (w)1999-2022 BSI
+[*] Wed Oct 26 22:16:23 2022
+[*]
+[dumpfile] "/home/declan/work/src/github.com/pietroglyph/comparch22/hws/5/pulse_generator.fst"
+[dumpfile_mtime] "Wed Oct 26 22:14:30 2022"
+[dumpfile_size] 954
+[savefile] "/home/declan/work/src/github.com/pietroglyph/comparch22/hws/5/wave_cfgs/pulse_generator.gtkw"
+[timestart] 29273000
+[size] 1920 1080
+[pos] -27 -24
+*-19.000000 31611000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] test_pulse_generator.
+[sst_width] 273
+[signals_width] 174
+[sst_expanded] 1
+[sst_vpaned_height] 324
+@200
+-Output
+@28
+test_pulse_generator.UUT.out
+@200
+-Internal State
+@8022
+test_pulse_generator.UUT.counter[6:0]
+@20000
+-
+-
+@28
+test_pulse_generator.UUT.counter_comparator
+@200
+-Inputs
+@28
+test_pulse_generator.UUT.clk
+test_pulse_generator.UUT.ena
+test_pulse_generator.UUT.rst
+@8025
+test_pulse_generator.UUT.ticks[6:0]
+[pattern_trace] 1
+[pattern_trace] 0
