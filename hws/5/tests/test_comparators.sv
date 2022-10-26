@@ -63,6 +63,17 @@ initial begin
 
   // Add more interesting tests here!
 
+  a = -2147483648;
+  b = 2147483647;
+  #1 print_io();
+
+  a = 2147483647;
+  b = -2147483648;
+  #1 print_io();
+
+  a = 1;
+  b = -1;
+  #1 print_io();
   
   $display("Random testing.");
   for (int i = 0; i < 10; i = i + 1) begin : random_testing
