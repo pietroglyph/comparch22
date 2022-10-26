@@ -13,7 +13,16 @@ test_comparators: tests/test_comparators.sv hdl/comparator_eq.sv hdl/comparator_
 waves_comparator: test_comparators
 	gtkwave comparators.fst --save=wave_cfgs/comparators.gtkw
 
-test_pulse_generator: tests/test_pulse_generator.sv hdl/pulse_generator.sv ${ADDER_SOURCES} hdl/comparator_eq.sv
+waves_pulse_generator: test_pulse_generator
+	gtkwave pulse_generator.fst --save=wave_cfgs/pulse_generator.gtkw
+
+waves_triangle_generator: test_triangle_generator
+	gtkwave triangle_generator.fst --save=wave_cfgs/triangle_generator.gtkw
+
+waves_pwm: test_pwm
+	gtkwave pwm.fst --save=wave_cfgs/pwm.gtkw
+
+test_pulse_generator: tests/test_pulse_generator.sv hdl/pulse_generator.sv
 	${IVERILOG} $^ -o test_pulse_generator.bin && ${VVP} test_pulse_generator.bin ${VVP_POST}
 
 test_triangle_generator: tests/test_triangle_generator.sv hdl/triangle_generator.sv
