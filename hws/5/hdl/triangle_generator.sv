@@ -15,7 +15,6 @@ always_ff @(posedge clk) begin
 		out <= 0;
 	end
 	else if (ena) begin
-		//state = (pulse_zero | pulse_max) ? ~logic'(state) : state;
 		if (out === 0 | out === 2**N - 1) begin
 			// Ideally this would be:
 			// state = (pulse_zero | pulse_max) ? state_t'(~logic'(state)) : state;

@@ -11,7 +11,7 @@ output logic out;
 
 always_ff @(posedge clk) begin
 	if (rst) counter <= 0;
-	else counter <= counter + 1;
+	else if (ena) counter <= counter + 1;
 end
 always_comb begin
 	counter_comparator = counter == ticks;
