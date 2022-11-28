@@ -7,26 +7,42 @@ module register_file(
   rd_addr0, rd_data0,
   rd_addr1, rd_data1
 );
-// Not parametrizing, these widths are defined by the RISC-V Spec!
+parameter REG_SIZE = 32;
+parameter REG_NUM = 32;
+
 input wire clk;
 
 // Write channel
 input wire wr_ena;
-input wire [4:0] wr_addr;
-input wire [31:0] wr_data;
+input wire [$clog2(REG_NUM)-1:0] wr_addr;
+input wire [REG_SIZE-1:0] wr_data;
 
 // Two read channels
-input wire [4:0] rd_addr0, rd_addr1;
-output logic [31:0] rd_data0, rd_data1;
+input wire [$clog2(REG_NUM)-1:0] rd_addr0, rd_addr1;
+output logic [REG_SIZE-1:0] rd_data0, rd_data1;
 
-logic [31:0] x00; 
-always_comb x00 = 32'd0; // ties x00 to ground. 
+wire [REG_NUM*REG_SIZE-1:0] register_ds, register_qs;
+wire [REG_NUM-1:0] should_write;
 
-// DON'T DO THIS:
-// logic [31:0] register_file_registers [31:0]
-// CAN'T: because that's a RAM. Works in simulation, fails miserably in synthesis.
+generate
+	for (genvar i = 0; i < REG_NUM; i++) begin
+		if (i == 0) begin
+			assign register_qs[REG_SIZE-1:0] = {REG_SIZE{1'b0}};
+		end
+		else begin
+			register #(.N(REG_SIZE)) REG(clk, wr_ena, 1'b0, register_ds[REG_SIZE*(i+1)-1:REG_SIZE*i], register_qs[REG_SIZE*(i+1)-1:REG_SIZE*i]);
+		end
 
-// Hint - use a scripting language if you get tired of copying and pasting the logic 32 times - e.g. python: print(",".join(["x%02d"%i for i in range(0,32)]))
-wire [31:0] x01,x02,x03,x04,x05,x06,x07,x08,x09,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,x31;
+		// This is *totally* not the most efficient way to do this,
+		// but it also means I don't have to glue together a bunch of
+		// decoders to get a 32-bit decoder :)
+		comparator_eq #(.N($clog2(REG_NUM))) WR_CMP(wr_addr, $clog2(REG_NUM)'(i), should_write[i]);
+		assign register_ds = should_write[i] ? wr_data : register_qs;
+	end
+endgenerate
+
+muxn #(.INPUT_SIZE(REG_SIZE), .INPUT_NUM(REG_NUM)) MUX_Q0(register_qs, rd_addr0, rd_data0);
+muxn #(.INPUT_SIZE(REG_SIZE), .INPUT_NUM(REG_NUM)) MUX_Q1(register_qs, rd_addr1, rd_data1);
+
 
 endmodule

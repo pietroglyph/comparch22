@@ -31,3 +31,4 @@ function string alu_control_name(alu_control_t control);
 endfunction
 
 `endif // ALU_TYPES_H
+

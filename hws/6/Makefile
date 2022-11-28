@@ -15,7 +15,7 @@ test_alu: ${ALU_TEST_FILES} ${ALU_SRCS} tests/alu_testcases.memh
 waves_alu: test_alu
 		gtkwave alu.fst &
 
-RFILE_SRCS:=hdl/register.sv hdl/register_file.sv hdl/mux*.sv
+RFILE_SRCS:=hdl/register.sv hdl/register_file.sv hdl/mux*.sv hdl/comparator*.sv
 
 test_register_file: ${RFILE_SRCS} tests/test_register_file.sv
 	${IVERILOG} $^ -o test_register_file.bin && ${VVP} test_register_file.bin ${VVP_POST}

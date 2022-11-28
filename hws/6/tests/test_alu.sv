@@ -5,7 +5,7 @@
 module test_alu;
 
 parameter N = 32; // Don't need to support other numbers, just using this as a constant.
-parameter N_TEST_VECTOR = 9; // Change this number based on how many cases you implement in alu_testcases.memh
+parameter N_TEST_VECTOR = 24; // Change this number based on how many cases you implement in alu_testcases.memh
 parameter N_RANDOM_TESTS = 25;
 parameter MAX_ERRORS = 10; // You can change this number to have the test fail earlier or later if too many errors are encounterd. Can make it easier to sift through waveforms.
 
@@ -38,7 +38,7 @@ initial begin
   a = 0; b = 0; control = control.first;
   errors = 0;
   // Edit the alu_testcases.memh file to add more test cases!
-  $readmemh("tests/alu_testcases.memh", test_vector);
+  $readmemh("./tests/alu_testcases.memh", test_vector);
   loop = 1;
   while (loop) begin
     $display("Testing alu control = %b (%s)", control, alu_control_name(control));
