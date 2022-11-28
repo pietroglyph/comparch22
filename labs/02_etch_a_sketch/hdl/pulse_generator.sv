@@ -10,15 +10,13 @@ input wire [N-1:0] ticks;
 output logic out;
 
 logic [N-1:0] counter;
-logic counter_comparator;
 
 always_ff @(posedge clk) begin
 	if (rst) counter <= 0;
 	else if (ena) counter <= counter + 1;
 end
 always_comb begin
-	counter_comparator = counter == ticks;
-	out = counter_comparator;
+	out = counter == ticks;
 end
 
 endmodule

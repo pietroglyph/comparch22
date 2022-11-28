@@ -1,0 +1,41 @@
+[*]
+[*] GTKWave Analyzer v3.3.113 (w)1999-2022 BSI
+[*] Wed Nov 16 15:20:01 2022
+[*]
+[dumpfile] "/home/declan/work/src/github.com/pietroglyph/comparch22/labs/02_etch_a_sketch/main.fst"
+[dumpfile_mtime] "Wed Nov 16 15:18:00 2022"
+[dumpfile_size] 3504853
+[savefile] "/home/declan/work/src/github.com/pietroglyph/comparch22/labs/02_etch_a_sketch/main.gtkw"
+[timestart] 0
+[size] 1920 1080
+[pos] -1 -1
+*-28.000000 467687000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] test_main.
+[treeopen] test_main.UUT.
+[treeopen] test_main.UUT.FT6206.
+[sst_width] 273
+[signals_width] 222
+[sst_expanded] 1
+[sst_vpaned_height] 309
+@28
+test_main.UUT.FT6206.I2C0.sda
+test_main.UUT.FT6206.I2C0.scl
+@200
+-
+@22
+test_main.UUT.FT6206.I2C0.state[3:0]
+@200
+-
+@28
+test_main.UUT.FT6206.I2C0.i_addr[6:0]
+test_main.UUT.FT6206.I2C0.i_data[7:0]
+@200
+-
+@8022
+test_main.UUT.FT6206.I2C0.clk_divider_counter[8:0]
+@8023
+test_main.UUT.FT6206.I2C0.cooldown_counter[4:0]
+@8022
+test_main.UUT.FT6206.I2C0.bit_counter[3:0]
+[pattern_trace] 1
+[pattern_trace] 0

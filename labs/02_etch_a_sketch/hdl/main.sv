@@ -72,7 +72,7 @@ MMCME2_BASE_inst (
 // Touch signals
 touch_t touch0, touch1;
 
-`define LAB_PART_1 // Uncomment once you start working on the next parts.
+//`define LAB_PART_1 // Comment once you start working on the next parts.
 
 /* ------------------------------------------------------------------------- */
 /* -- Part 1 - Intro to Sequential Logic on FPGAs                         -- */
@@ -114,7 +114,6 @@ pwm #(.N(PWM_WIDTH)) PWM_LED1 (
   .out(leds[1])
 );
 
-`define LAB_PART_1
 always_comb begin: led_pwm_muxes
 `ifdef LAB_PART_1
   // For part 1, use the output of the triangle generators.
@@ -126,12 +125,6 @@ always_comb begin: led_pwm_muxes
   led_pwm1 = touch0.valid ? touch0.y : 0;
 `endif // LAB_PART_1
 end
-
-always_comb begin: rgb_leds
-  rgb = 3'b110; // RGB leds are active low, so this sets the LEDs to blue.
-  // Feel free to add more logic here as a debugging signal!
-end
-
 
 /* ------------------------------------------------------------------------- */
 /* -- Part 2 - Option A - SPI control of the ili9341                      -- */
@@ -149,7 +142,7 @@ ili9341_display_controller ILI9341(
   .vram_rd_addr(vram_rd_addr),
   .vram_rd_data(vram_rd_data),
   // !!! NOTE - change enable_test_pattern to zero once you start implementing the video ram !!!
-  .enable_test_pattern(1'b1) 
+  .enable_test_pattern(1'b0) 
 );
 
 /* ------------------------------------------------------------------------- */
@@ -182,5 +175,44 @@ block_ram #(.W(VRAM_W), .L(VRAM_L)) VRAM(
   .wr_ena(vram_wr_ena), .wr_addr(vram_wr_addr), .wr_data(vram_wr_data)
 );
 // Add your vram control FSM here:
+
+// WRITE, IDLE, CLEAR
+enum logic [1:0] {
+	S_WRITE,
+	S_IDLE,
+	S_CLEAR,
+	S_ERROR
+} vram_state;
+
+always_ff @(posedge clk) begin
+	if (rst) begin
+		vram_clear_counter <= VRAM_L;
+		vram_state <= S_CLEAR;
+	end else begin
+		case (vram_state)
+			S_IDLE: if (touch0.valid) vram_state <= S_WRITE;
+			S_WRITE: if (~touch0.valid) vram_state <= S_IDLE;
+			S_CLEAR: begin
+				vram_clear_counter <= vram_clear_counter - 1;
+				if (vram_clear_counter == 0) vram_state <= S_IDLE;
+			end
+			default: vram_state <= S_ERROR;
+		endcase
+	end
+end
+
+always_comb case (vram_state)
+	S_IDLE, S_ERROR: vram_wr_ena = 0;
+	S_WRITE: begin
+		vram_wr_ena = 1;
+		vram_wr_addr = touch0.y * DISPLAY_WIDTH + touch0.x;
+		vram_wr_data = RED;
+	end
+	S_CLEAR: begin
+		vram_wr_ena = 1;
+		vram_wr_addr = vram_clear_counter;
+		vram_wr_data = BLACK;
+	end
+endcase
 
 endmodule

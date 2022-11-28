@@ -10,8 +10,8 @@ parameter CLK_HZ = 12_000_000;
 parameter CLK_PERIOD_NS = (1_000_000_000/CLK_HZ);
 parameter I2C_CLK_HZ = 400_000; // Must be <= 400kHz
 parameter DIVIDER_COUNT = CLK_HZ/I2C_CLK_HZ/2;  // Divide by two necessary since we toggle the signal
-parameter MAX_CYCLES_PER_TX = 1000;
-parameter MAX_CYCLES = 10000;
+parameter MAX_CYCLES_PER_TX = 3000;
+parameter MAX_CYCLES = 1000000;
 
 //Module I/O and parameters
 logic clk, rst;

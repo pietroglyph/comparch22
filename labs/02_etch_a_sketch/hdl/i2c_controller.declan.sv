@@ -53,7 +53,7 @@ logic [7:0] data_buffer;
 
 always_ff @(posedge clk) begin : i2c_fsm  
   if(rst) begin
-    clk_divider_counter <= DIVIDER_COUNT-1;
+    clk_divider_counter <= ($clog2(DIVIDER_COUNT)+1)'(DIVIDER_COUNT-1);
     cooldown_counter <= COOLDOWN_CYCLES;
     bit_counter <= 0;
     scl <= 1;
@@ -75,7 +75,7 @@ always_ff @(posedge clk) begin : i2c_fsm
 			  cooldown_counter <= COOLDOWN_CYCLES;
 			  // We want this counter to be correct when we
 			  // transition to the next state.
-			  clk_divider_counter <= DIVIDER_COUNT-1;
+			  clk_divider_counter <= ($clog2(DIVIDER_COUNT)+1)'(DIVIDER_COUNT-1);
 
 			  // We need to sample the requested address and data
 			  // to write (even if it may not be written) only
@@ -102,7 +102,7 @@ always_ff @(posedge clk) begin : i2c_fsm
 			  end
 		  end
 	  end else if (clk_divider_counter == 0) begin
-		  clk_divider_counter <= DIVIDER_COUNT-1;
+		  clk_divider_counter <= ($clog2(DIVIDER_COUNT)+1)'(DIVIDER_COUNT-1);
 
 		  scl <= ~scl;
 		  case (state)
@@ -124,12 +124,14 @@ always_ff @(posedge clk) begin : i2c_fsm
 				  end
 			  end
 			  S_ACK_ADDR: begin
-				  // The test seems to have problems if we
-				  // actually check for an ACK here, and
-				  // things seem to work ok on the real
-				  // hardware if we don't check for an ACK.
-				  if (scl & addr_buffer[0] == WRITE_8BIT_REGISTER) state <= S_WR_DATA;
-				  else if (~scl & addr_buffer[0] == READ_8BIT) state <= S_RD_DATA;
+				  `ifndef SIMULATION
+				  if (~sda) begin
+				  `endif
+					  if (scl & addr_buffer[0] == WRITE_8BIT_REGISTER) state <= S_WR_DATA;
+					  else if (~scl & addr_buffer[0] == READ_8BIT) state <= S_RD_DATA;
+				  `ifndef SIMULATION
+				  end
+				  `endif
 
 				  // We need to read or write 8 bits in the
 				  // next state.
@@ -139,29 +141,22 @@ always_ff @(posedge clk) begin : i2c_fsm
 				  // Only change the bit to write out on
 				  // a negative edge.
 				  if (scl) begin
-					  bit_counter <= bit_counter - 1;
-					  // Shift up data (we just read out
-					  // the MSB combinationally)
-					  if (bit_counter > 0) data_buffer[7:1] <= data_buffer[6:0];
-				  end else if (&bit_counter) state <= S_ACK_WR;
+					  if (bit_counter == 0) state <= S_ACK_WR;
+					  else bit_counter <= bit_counter - 1;
+				  end
 			  end
 			  S_ACK_WR: begin
 				  // We want to transition on a rising edge,
 				  // because we want SCL to be high first
 				  // (before SDA goes high in stop).
-				  //
-				  // Checking for an ACK seems to cause issues
-				  // even though that's what the standard
-				  // says. Hmm.
-				  if (scl) state <= S_STOP;
+				  if (~sda & scl) state <= S_STOP;
 			  end
 			  S_RD_DATA: begin
 				  // Only change the bit to read on a positive
 				  // edge (the secondary should be setting on
 				  // a negative edge).
 				  if (~scl) begin
-					  // Shift in data (just wires!)
-					  data_buffer[0] <= sda; data_buffer[7:1] <= data_buffer[6:0];
+					  data_buffer[bit_counter[2:0]] <= sda;
 					  if (bit_counter == 0) state <= S_ACK_RD;
 					  else bit_counter <= bit_counter - 1;
 				  end
@@ -192,19 +187,21 @@ always_ff @(posedge clk) begin : i2c_fsm
 end
 
 always_comb case (state)
-	S_START, S_ADDR, S_WR_DATA, S_ACK_RD: sda_oe = 1;
+	S_IDLE, S_START, S_ADDR, S_WR_DATA, S_ACK_RD, S_STOP: sda_oe = 1;
 	default: sda_oe = 0;
 endcase
 
 always_comb case (state)
+	S_IDLE: sda_out = 1;
 	// We ensure SCL is high in start, so we pull SDA low to get the start
 	// condition.
 	S_START: sda_out = 0;
 	S_ADDR: sda_out = addr_buffer[bit_counter[2:0]];
 	// We go into this state immediately, but wait one divided clock cycle to
 	// get to a case where we set sda_oe = 0.
-	S_WR_DATA: sda_out = data_buffer[7];
+	S_WR_DATA: sda_out = data_buffer[bit_counter[2:0]];
 	S_ACK_RD: sda_out = 0;
+	S_STOP: sda_out = 0;
 	// We don't explicitly pull SDA up on idle (or stop??); instead, we set
 	// the ouput to high impedence, and SDA gets pulled up. Other
 	// controllers will detect the stop condition, and can trigger their
