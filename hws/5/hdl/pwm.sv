@@ -21,6 +21,6 @@ always_ff @(posedge clk) begin
 	end
 end
 
-always_comb out = (counter < duty) & ena;
+always_comb out = (counter <= duty) & ena;
 
 endmodule
