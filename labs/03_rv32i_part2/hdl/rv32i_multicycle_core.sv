@@ -131,71 +131,6 @@ always_ff @(posedge clk) begin : control_unit_fsm
 	end
 end
 
-always_comb begin : control_unit_combinational
-	case (state)
-		S_FETCH: begin
-			PC_ena = 1'b1;
-			writeback_src = RESULT_SRC_ALU;
-
-			alu_control = ALU_ADD;
-			alu_src_a = ALU_SRC_A_PC;
-			alu_src_b = ALU_SRC_B_WORD_SIZE;
-
-			mem_wr_ena = 1'b0;
-			mem_addr_src = MEM_ADDR_SRC_PC;
-
-			reg_write = 1'b0;
-
-			IR_write = 1'b1;
-		end
-		S_EXECUTE_R_TYPE: begin
-			PC_ena = 1'b0;
-			writeback_src = RESULT_SRC_ALU_OLD;
-
-			alu_control = ALU_INVALID;//alu_control_t'(funct3);
-			alu_src_a = ALU_SRC_A_RS1;
-			alu_src_b = ALU_SRC_B_RS2;
-
-			mem_wr_ena = 1'b0;
-			mem_addr_src = MEM_ADDR_SRC_INVALID;
-
-			reg_write = 1'b0;
-
-			IR_write = 1'b0;
-		end
-		S_ALU_WRITE_BACK: begin
-			PC_ena = 1'b0;
-			writeback_src = RESULT_SRC_ALU_OLD;
-
-			alu_control = ALU_INVALID;
-			alu_src_a = ALU_SRC_A_INVALID;
-			alu_src_b = ALU_SRC_B_INVALID;
-
-			mem_wr_ena = 1'b0;
-			mem_addr_src = MEM_ADDR_SRC_INVALID;
-
-			reg_write = 1'b1;
-
-			IR_write = 1'b0;
-		end
-		default: begin
-			PC_ena = 1'b0;
-			writeback_src = RESULT_SRC_INVALID;
-
-			alu_control = ALU_INVALID;
-			alu_src_a = ALU_SRC_A_INVALID;
-			alu_src_b = ALU_SRC_B_INVALID;
-
-			mem_wr_ena = 1'b0;
-			mem_addr_src = MEM_ADDR_SRC_INVALID;
-
-			reg_write = 1'b0;
-
-			IR_write = 1'b0;
-		end
-	endcase
-end
-
 // Decode unit (we're throwing immediate extension in too)
 logic [6:0] op;
 logic [2:0] funct3;
@@ -233,46 +168,88 @@ always_comb begin : decode_unit
 end
 
 // Datapath
-// Writeback result mux
-enum logic [1:0] {RESULT_SRC_ALU, RESULT_SRC_ALU_OLD, RESULT_SRC_MEM_READ, RESULT_SRC_INVALID} writeback_src;
-always_comb begin : writeback_datapath_and_mux
-	case (writeback_src)
-		RESULT_SRC_ALU: writeback_result = alu_result;
-		RESULT_SRC_ALU_OLD: writeback_result = alu_result_old;
-		RESULT_SRC_MEM_READ: writeback_result = mem_rd_data_old;
+// Writeback control
+always_comb begin : writeback_control
+	case (state)
+		S_FETCH: writeback_result = alu_result;
+		S_EXECUTE_R_TYPE, S_ALU_WRITE_BACK: writeback_result = alu_result_old;
+		//RESULT_SRC_MEM_READ: writeback_result = mem_rd_data_old;
 		default: writeback_result = 32'b0;
 	endcase
 
 	PC_next = writeback_result;
+end
+
+// Register file control
+always_comb begin : reg_file_control
+	case (state)
+		S_ALU_WRITE_BACK: reg_write = 1'b1;
+		default: reg_write = 1'b0;
+	endcase
+
 	rfile_wr_data = writeback_result;	
 end
 
-// Memory input address mux
-enum logic [1:0] {MEM_ADDR_SRC_ALU, MEM_ADDR_SRC_PC, MEM_ADDR_SRC_INVALID} mem_addr_src;
-always_comb begin : mem_addr_mux
-	case (mem_addr_src)
-		MEM_ADDR_SRC_ALU: mem_addr = writeback_result;
-		MEM_ADDR_SRC_PC: mem_addr = PC;
+// Memory control
+always_comb begin : memory_control
+	case (state)
+		//MEM_ADDR_SRC_ALU: mem_addr = writeback_result;
+		S_FETCH: mem_addr = PC;
 		default: mem_addr = 32'b0;
 	endcase
+
+	case (state)
+		default: mem_wr_ena = 1'b0;
+	endcase
+
+	mem_wr_data = reg_data2_old;
 end
 
-// ALU input muxes
-enum logic [1:0] {ALU_SRC_A_PC, ALU_SRC_A_PC_OLD, ALU_SRC_A_RS1, ALU_SRC_A_INVALID} alu_src_a;
-enum logic [1:0] {ALU_SRC_B_WORD_SIZE, ALU_SRC_B_IMM_EXT, ALU_SRC_B_RS2, ALU_SRC_B_INVALID} alu_src_b;
-always_comb begin : alu_input_muxes
-	case (alu_src_a)
-		ALU_SRC_A_PC: src_a = PC;
-		ALU_SRC_A_PC_OLD: src_a = PC_old;
-		ALU_SRC_A_RS1: src_a = {27'b0, rs1}; // XXX: Same as below.
+// ALU control
+always_comb begin : alu_control_
+	case (state)
+		S_FETCH: src_a = PC;
+		//ALU_SRC_A_PC_OLD: src_a = PC_old;
+		S_EXECUTE_R_TYPE, S_EXECUTE_B_TYPE, S_EXECUTE_I_TYPE: src_a = reg_data1_old;
 		default: src_a = 32'b0;
 	endcase
 
-	case (alu_src_b)
-		ALU_SRC_B_WORD_SIZE: src_b = 32'd4;
-		ALU_SRC_B_IMM_EXT: src_b = imm_ext;
-		ALU_SRC_B_RS2: src_b = {27'b0, rs2}; // XXX: Should we sign extend?
+	case (state)
+		S_FETCH: src_b = 32'd4;
+		S_EXECUTE_R_TYPE, S_EXECUTE_B_TYPE: src_b = reg_data2_old;
+		S_EXECUTE_I_TYPE: src_b = imm_ext;
 		default: src_b = 32'b0;
+	endcase
+
+	// XXX: The instructions that use funct7 to
+	// differentiate themselves will break if there's
+	// a non sub/sra instruction with a nonzero funct7
+	// code. I'll fix this later, right? :)
+	case (state)
+		S_FETCH: alu_control = ALU_ADD;
+		S_EXECUTE_R_TYPE, S_EXECUTE_I_TYPE: case (funct3)
+			FUNCT3_ADD: alu_control = funct7 === 7'b0 ? ALU_ADD : ALU_SUB;
+			FUNCT3_SLL: alu_control = ALU_SLL;
+			FUNCT3_SLT: alu_control = ALU_SLT;
+			FUNCT3_SLTU: alu_control = ALU_SLTU;
+			FUNCT3_XOR: alu_control = ALU_XOR;
+			FUNCT3_SHIFT_RIGHT: alu_control = funct7 === 7'b0 ? ALU_SRL : ALU_SRA;
+			FUNCT3_OR: alu_control = ALU_OR;
+			FUNCT3_AND: alu_control = ALU_AND;
+			default: alu_control = ALU_INVALID;
+		endcase
+		default: alu_control = ALU_INVALID;
+	endcase
+end
+
+// Program counter enable control
+always_comb PC_ena = state === S_FETCH;
+
+// Instruction register enable control
+always_comb begin : ir_ena_control
+	case (state)
+		S_FETCH: IR_write = 1'b1;
+		default: IR_write = 1'b0;
 	endcase
 end
 
