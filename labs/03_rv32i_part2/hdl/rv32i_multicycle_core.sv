@@ -147,7 +147,7 @@ always_comb begin : decode_unit
 	funct7 = IR[31:25];
 
 	case (op)
-		OP_LTYPE, OP_ITYPE: imm_ext_src = IMM_EXT_SRC_I_TYPE;
+		OP_LTYPE, OP_ITYPE, OP_JALR: imm_ext_src = IMM_EXT_SRC_I_TYPE;
 		OP_AUIPC, OP_LUI: imm_ext_src = IMM_EXT_SRC_U_TYPE;
 		OP_STYPE: imm_ext_src = IMM_EXT_SRC_S_TYPE;
 		OP_BTYPE: imm_ext_src = IMM_EXT_SRC_B_TYPE;	
@@ -172,8 +172,8 @@ end
 always_comb begin : writeback_control
 	case (state)
 		S_FETCH: writeback_result = alu_result;
-		S_EXECUTE_R_TYPE, S_ALU_WRITE_BACK: writeback_result = alu_result_old;
-		//RESULT_SRC_MEM_READ: writeback_result = mem_rd_data_old;
+		S_EXECUTE_R_TYPE, S_ALU_WRITE_BACK, S_MEM_WRITE_BACK, S_MEM_WRITE: writeback_result = alu_result_old;
+		S_MEM_WRITE_BACK: writeback_result = mem_rd_data_old;
 		default: writeback_result = 32'b0;
 	endcase
 
@@ -193,12 +193,13 @@ end
 // Memory control
 always_comb begin : memory_control
 	case (state)
-		//MEM_ADDR_SRC_ALU: mem_addr = writeback_result;
 		S_FETCH: mem_addr = PC;
+		S_MEM_WRITE_BACK, S_MEM_WRITE: mem_addr = writeback_result;
 		default: mem_addr = 32'b0;
 	endcase
 
 	case (state)
+		S_MEM_WRITE: mem_wr_ena = 1'b1;
 		default: mem_wr_ena = 1'b0;
 	endcase
 
@@ -206,20 +207,30 @@ always_comb begin : memory_control
 end
 
 // ALU control
+logic magic_funct7, zero_funct7;
 always_comb begin : alu_control_
 	case (state)
 		S_FETCH: src_a = PC;
 		//ALU_SRC_A_PC_OLD: src_a = PC_old;
-		S_EXECUTE_R_TYPE, S_EXECUTE_B_TYPE, S_EXECUTE_I_TYPE: src_a = reg_data1_old;
+		S_EXECUTE_R_TYPE, S_EXECUTE_B_TYPE, S_EXECUTE_I_TYPE, S_MEM_ADDR: src_a = reg_data1_old;
 		default: src_a = 32'b0;
 	endcase
 
 	case (state)
 		S_FETCH: src_b = 32'd4;
 		S_EXECUTE_R_TYPE, S_EXECUTE_B_TYPE: src_b = reg_data2_old;
-		S_EXECUTE_I_TYPE: src_b = imm_ext;
+		S_EXECUTE_I_TYPE: case (funct3)
+			// sll and sra/srl have an effective funct7 in the
+			// immediate which we don't want.
+			FUNCT3_SLL, FUNCT3_SHIFT_RIGHT: src_b = {27'b0, imm_ext[4:0]};
+			default: src_b = imm_ext;
+		endcase
+		S_MEM_ADDR: src_b = imm_ext;
 		default: src_b = 32'b0;
 	endcase
+
+	magic_funct7 = funct7 === 7'b0100000;
+	zero_funct7 = funct7 === 7'b0;
 
 	// XXX: The instructions that use funct7 to
 	// differentiate themselves will break if there's
@@ -228,16 +239,28 @@ always_comb begin : alu_control_
 	case (state)
 		S_FETCH: alu_control = ALU_ADD;
 		S_EXECUTE_R_TYPE, S_EXECUTE_I_TYPE: case (funct3)
-			FUNCT3_ADD: alu_control = funct7 === 7'b0 ? ALU_ADD : ALU_SUB;
-			FUNCT3_SLL: alu_control = ALU_SLL;
+			FUNCT3_ADD: begin
+				if (state === S_EXECUTE_I_TYPE | zero_funct7) alu_control = ALU_ADD;
+				else if (state === S_EXECUTE_R_TYPE & magic_funct7) alu_control = ALU_SUB;
+				else alu_control = ALU_INVALID;
+			end
+			FUNCT3_SLL: begin
+				if (zero_funct7) alu_control = ALU_SLL;
+				else alu_control = ALU_INVALID;
+			end
 			FUNCT3_SLT: alu_control = ALU_SLT;
 			FUNCT3_SLTU: alu_control = ALU_SLTU;
 			FUNCT3_XOR: alu_control = ALU_XOR;
-			FUNCT3_SHIFT_RIGHT: alu_control = funct7 === 7'b0 ? ALU_SRL : ALU_SRA;
+			FUNCT3_SHIFT_RIGHT: begin
+				if (zero_funct7) alu_control = ALU_SRL;
+				else if (magic_funct7) alu_control = ALU_SRA;
+				else alu_control = ALU_INVALID;
+			end
 			FUNCT3_OR: alu_control = ALU_OR;
 			FUNCT3_AND: alu_control = ALU_AND;
 			default: alu_control = ALU_INVALID;
 		endcase
+		S_MEM_ADDR: alu_control = ALU_ADD;
 		default: alu_control = ALU_INVALID;
 	endcase
 end
