@@ -63,6 +63,7 @@ logic [31:0] src_a, src_b;
 alu_control_t alu_control;
 wire [31:0] alu_result;
 logic [31:0] alu_result_old, writeback_result;
+logic alu_equal_old;
 wire overflow, zero, equal;
 alu_behavioural ALU (
   .a(src_a), .b(src_b), .result(alu_result),
@@ -87,7 +88,7 @@ enum logic [3:0] {
 	S_EXECUTE_JAL,
 	S_EXECUTE_JALR,
 	S_ALU_WRITE_BACK,
-	// XXX: Need jump writeback?
+	S_JUMP_WRITE_BACK,
 
 	// For B-type
 	S_EXECUTE_B_TYPE,
@@ -102,7 +103,9 @@ always_ff @(posedge clk) begin : control_unit_fsm
 			S_FETCH: state <= S_DECODE;
 			S_DECODE: begin
 				case (op)
-					OP_LTYPE, OP_STYPE: state <= S_MEM_ADDR;
+					// TODO: Support non-word L- and
+					// S-types
+					OP_LTYPE, OP_STYPE: state <= funct3 === 3'b010 ? S_MEM_ADDR : S_ERROR;
 					OP_RTYPE: state <= S_EXECUTE_R_TYPE;
 					OP_ITYPE: state <= S_EXECUTE_I_TYPE;
 					OP_JAL: state <= S_EXECUTE_JAL;
@@ -121,8 +124,11 @@ always_ff @(posedge clk) begin : control_unit_fsm
 			S_MEM_WRITE: state <= S_FETCH;
 			S_MEM_WRITE_BACK: state <= S_FETCH;
 
-			S_EXECUTE_R_TYPE, S_EXECUTE_I_TYPE, S_EXECUTE_JAL, S_EXECUTE_JALR: state <= S_ALU_WRITE_BACK;
+			S_EXECUTE_R_TYPE, S_EXECUTE_I_TYPE, S_EXECUTE_JAL: state <= S_ALU_WRITE_BACK;
 			S_ALU_WRITE_BACK: state <= S_FETCH;
+
+			S_EXECUTE_JALR: state <= S_JUMP_WRITE_BACK;
+			S_JUMP_WRITE_BACK: state <= S_FETCH;
 
 			S_EXECUTE_B_TYPE: state <= S_FETCH;
 
@@ -159,7 +165,7 @@ always_comb begin : decode_unit
 		// We sign-extend (i.e. take MSB for top bytes) for everything
 		// but U-type.
 		IMM_EXT_SRC_I_TYPE: imm_ext = {{20{IR[31]}}, IR[31:20]};
-		IMM_EXT_SRC_S_TYPE: imm_ext = {{20{IR[31]}}, IR[11:5], IR[4:0]};
+		IMM_EXT_SRC_S_TYPE: imm_ext = {{20{IR[31]}}, IR[31:25], IR[11:7]};
 		IMM_EXT_SRC_B_TYPE: imm_ext = {{20{IR[31]}}, IR[7], IR[30:25], IR[11:8], 1'b0};
 		IMM_EXT_SRC_J_TYPE: imm_ext = {{12{IR[31]}}, IR[19:12], IR[20], IR[30:21], 1'b0};
 		IMM_EXT_SRC_U_TYPE: imm_ext = {IR[31:12], 12'b0};
@@ -172,7 +178,7 @@ end
 always_comb begin : writeback_control
 	case (state)
 		S_FETCH: writeback_result = alu_result;
-		S_EXECUTE_R_TYPE, S_ALU_WRITE_BACK, S_MEM_WRITE_BACK, S_MEM_WRITE: writeback_result = alu_result_old;
+		S_EXECUTE_R_TYPE, S_EXECUTE_B_TYPE, S_EXECUTE_JAL, S_ALU_WRITE_BACK, S_JUMP_WRITE_BACK, S_MEM_WRITE, S_MEM_READ: writeback_result = alu_result_old;
 		S_MEM_WRITE_BACK: writeback_result = mem_rd_data_old;
 		default: writeback_result = 32'b0;
 	endcase
@@ -183,7 +189,7 @@ end
 // Register file control
 always_comb begin : reg_file_control
 	case (state)
-		S_ALU_WRITE_BACK: reg_write = 1'b1;
+		S_MEM_WRITE_BACK, S_ALU_WRITE_BACK: reg_write = 1'b1;
 		default: reg_write = 1'b0;
 	endcase
 
@@ -194,7 +200,7 @@ end
 always_comb begin : memory_control
 	case (state)
 		S_FETCH: mem_addr = PC;
-		S_MEM_WRITE_BACK, S_MEM_WRITE: mem_addr = writeback_result;
+		S_MEM_WRITE, S_MEM_READ: mem_addr = writeback_result;
 		default: mem_addr = 32'b0;
 	endcase
 
@@ -211,13 +217,14 @@ logic magic_funct7, zero_funct7;
 always_comb begin : alu_control_
 	case (state)
 		S_FETCH: src_a = PC;
-		//ALU_SRC_A_PC_OLD: src_a = PC_old;
-		S_EXECUTE_R_TYPE, S_EXECUTE_B_TYPE, S_EXECUTE_I_TYPE, S_MEM_ADDR: src_a = reg_data1_old;
+		S_DECODE, S_EXECUTE_JAL: src_a = PC_old;
+		S_EXECUTE_R_TYPE, S_EXECUTE_B_TYPE, S_EXECUTE_I_TYPE, S_EXECUTE_JALR, S_MEM_ADDR: src_a = reg_data1_old;
 		default: src_a = 32'b0;
 	endcase
 
 	case (state)
-		S_FETCH: src_b = 32'd4;
+		S_FETCH, S_EXECUTE_JAL: src_b = 32'd4;
+		S_DECODE, S_EXECUTE_JALR: src_b = imm_ext;
 		S_EXECUTE_R_TYPE, S_EXECUTE_B_TYPE: src_b = reg_data2_old;
 		S_EXECUTE_I_TYPE: case (funct3)
 			// sll and sra/srl have an effective funct7 in the
@@ -237,7 +244,7 @@ always_comb begin : alu_control_
 	// a non sub/sra instruction with a nonzero funct7
 	// code. I'll fix this later, right? :)
 	case (state)
-		S_FETCH: alu_control = ALU_ADD;
+		S_FETCH, S_MEM_ADDR, S_DECODE, S_EXECUTE_JAL, S_EXECUTE_JALR: alu_control = ALU_ADD;
 		S_EXECUTE_R_TYPE, S_EXECUTE_I_TYPE: case (funct3)
 			FUNCT3_ADD: begin
 				if (state === S_EXECUTE_I_TYPE | zero_funct7) alu_control = ALU_ADD;
@@ -260,13 +267,28 @@ always_comb begin : alu_control_
 			FUNCT3_AND: alu_control = ALU_AND;
 			default: alu_control = ALU_INVALID;
 		endcase
-		S_MEM_ADDR: alu_control = ALU_ADD;
+		S_EXECUTE_B_TYPE: case (funct3)
+			FUNCT3_BLTU, FUNCT3_BGEU: alu_control = ALU_SLTU;
+			default: alu_control = ALU_SLT;
+		endcase
 		default: alu_control = ALU_INVALID;
 	endcase
 end
 
 // Program counter enable control
-always_comb PC_ena = state === S_FETCH;
+always_comb begin : pc_ena_control
+	case (state)
+		S_FETCH, S_EXECUTE_JAL, S_JUMP_WRITE_BACK: PC_ena = 1'b1;
+		S_EXECUTE_B_TYPE: case (funct3)
+			FUNCT3_BEQ: PC_ena = equal;
+			FUNCT3_BNE: PC_ena = ~equal;
+			FUNCT3_BLT, FUNCT3_BLTU: PC_ena = alu_result[0];
+			FUNCT3_BGE, FUNCT3_BGEU: PC_ena = equal | ~alu_result[0];
+			default: PC_ena = 1'b0;
+		endcase
+		default: PC_ena = 1'b0;
+	endcase
+end
 
 // Instruction register enable control
 always_comb begin : ir_ena_control
@@ -285,58 +307,14 @@ always_ff @(posedge clk) begin : interstage_registers
 		reg_data1_old <= 32'b0;
 		reg_data2_old <= 32'b0;
 		alu_result_old <= 32'b0;
+		alu_equal_old <= 1'b0;
 	end else begin
 		mem_rd_data_old <= mem_rd_data;
 		reg_data1_old <= reg_data1;
 		reg_data2_old <= reg_data2;
 		alu_result_old <= alu_result;
+		alu_equal_old <= equal;
 	end
 end
-
-/*always_comb begin : control_combinational
-	// TODO: this maybe can just be a switch
-	case (state)
-		S_FETCH: begin
-			// Mux on program counter reg
-			PC_next = alu_result;
-			PC_ena = 1'b1;
-
-			// Mux on ALU control and inputs
-			alu_control = ALU_ADD;
-			src_a = PC;
-			src_b = 32'd4;
-
-			// Mux on MMU inputs
-			mem_addr = PC;
-			mem_wr_ena = 1'b0;
-
-			// Mux on instruction reg
-			IR_write = 1'b1;
-			IR_next = mem_rd_data;	
-		end
-		default: begin
-			// Honestly not sure what the most useful thing is
-			// here. Start over I guess?
-
-			// Mux on program counter reg
-			PC_next = 32'b0;
-			PC_ena = 1'b0;
-
-			// Mux on ALU control and inputs
-			alu_control = ALU_INVALID;
-			src_a = 32'b0;
-			src_b = 32'b0;
-
-			// Mux on MMU inputs
-			mem_addr = 32'b0;
-			mem_wr_ena = 1'b0;
-			mem_wr_data = 32'b0;
-
-			// Mux on instruction reg
-			IR_write = 1'b0;
-			IR_next = 32'b0;
-		end
-	endcase
-end*/
 
 endmodule
