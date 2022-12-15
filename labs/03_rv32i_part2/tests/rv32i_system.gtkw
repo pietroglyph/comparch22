@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.113 (w)1999-2022 BSI
-[*] Wed Dec 14 01:29:43 2022
+[*] Thu Dec 15 02:26:56 2022
 [*]
 [dumpfile] "/home/declan/work/src/github.com/pietroglyph/comparch22/labs/03_rv32i_part2/rv32i_system.fst"
-[dumpfile_mtime] "Tue Dec 13 23:44:04 2022"
-[dumpfile_size] 126987
+[dumpfile_mtime] "Thu Dec 15 02:16:35 2022"
+[dumpfile_size] 51800
 [savefile] "/home/declan/work/src/github.com/pietroglyph/comparch22/labs/03_rv32i_part2/tests/rv32i_system.gtkw"
-[timestart] 273430
+[timestart] 1641800
 [size] 1916 1007
 [pos] -1 -1
-*-14.274161 340000 775000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-15.274161 1780000 775000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] test_rv32i_system.
 [treeopen] test_rv32i_system.UUT.
 [treeopen] test_rv32i_system.UUT.CORE.
